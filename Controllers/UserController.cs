@@ -1,6 +1,8 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.Filters;
+using SocialLoginApi.CustomAttribute;
 
 namespace SocialLoginApi.Controllers
 {
@@ -8,11 +10,15 @@ namespace SocialLoginApi.Controllers
     [ApiController]
     public class UserController : ControllerBase
     {
-        [Authorize]
+        [Auth]
         [HttpGet("getemail")]
         public IActionResult GetEmail()
         {
-            return Ok();
+            var userId =  new AuthAttribute().GetUserId();
+            var userEmail = new AuthAttribute().GetUserEmail();
+
+            // Use user information
+            return Ok(new { UserId = userId, Email = userEmail });
         }
     }
 }

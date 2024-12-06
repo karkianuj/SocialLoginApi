@@ -9,6 +9,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using System.Net;
 
 namespace SocialLoginApi.Controllers
 {
@@ -36,23 +37,25 @@ namespace SocialLoginApi.Controllers
         public async Task<IActionResult> HandleGoogleCallback()
         {
             // Retrieve tokens and user information
-            var authenticateResult = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-            if (!authenticateResult.Succeeded || authenticateResult.Principal == null)
+            var auth = await HttpContext.AuthenticateAsync(CookieAuthenticationDefaults.AuthenticationScheme);
+            if (!auth.Succeeded || auth.Principal == null)
             {
                 return Unauthorized("Google login failed.");
             }
 
-            var claims = authenticateResult.Principal.Claims.ToDictionary(c => c.Type, c => c.Value);
+            var claims = auth.Principal.Identities.FirstOrDefault()?.Claims;
+            var email = string.Empty;
+            email = claims?.FirstOrDefault(c => c.Type == System.Security.Claims.ClaimTypes.Email)?.Value;
 
-            // Extract information
-            var userInfo = new
-            {
-                Name = claims.GetValueOrDefault("name"),
-                Email = claims.GetValueOrDefault("email"),
-                Picture = claims.GetValueOrDefault("picture")
-            };
-
-            return Ok(userInfo);
+            // Get parameters to send back to the callback
+            var qs = new Dictionary<string, string>
+                {
+                    { "access_token", auth.Properties.GetTokenValue("access_token") },
+                    { "refresh_token", auth.Properties.GetTokenValue("refresh_token") ?? string.Empty },
+                    { "expires_in", (auth.Properties.ExpiresUtc?.ToUnixTimeSeconds() ?? -1).ToString() },
+                    { "email", email }
+                };
+            return Ok(qs);
         }
 
         [HttpPost("login")]
@@ -67,8 +70,8 @@ namespace SocialLoginApi.Controllers
             {
                 new Claim(JwtRegisteredClaimNames.Sub, Email),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
-                new Claim(JwtRegisteredClaimNames.Email, Email),
-                new Claim("uid", Email.ToString()),
+                new Claim(ClaimTypes.Email, Email),
+                new Claim(ClaimTypes.NameIdentifier, Email),
             };
 
             var symmetricSecurityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_jwtSetting.Key));
