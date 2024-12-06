@@ -24,29 +24,9 @@ internal class Program
 
             builder.Services.Configure<JwtSetting>(builder.Configuration.GetSection("JWT"));
             builder.Services
-                .AddAuthentication(options =>
+                .AddAuthentication(o =>
                 {
-                    // Set up the default authentication and sign-in schemes
-                    options.DefaultAuthenticateScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultSignInScheme = CookieAuthenticationDefaults.AuthenticationScheme;
-                    options.DefaultChallengeScheme = GoogleDefaults.AuthenticationScheme;
-                })
-                .AddJwtBearer(x =>
-                {
-                    x.TokenValidationParameters = new TokenValidationParameters()
-                    {
-                        ValidateIssuerSigningKey = true,
-                        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["JWT:Key"] ?? "")),
-                        ValidIssuer = builder.Configuration["JWT:Issuer"],
-                        ValidAudience = builder.Configuration["JWT:Audience"],
-                        ClockSkew = TimeSpan.Zero,
-                        RequireExpirationTime = true,
-                        ValidateLifetime = true,
-                        ValidateIssuer = true,
-                        RequireSignedTokens = true
-                    };
-                    x.RequireHttpsMetadata = false;
-                    x.SaveToken = true;
+                    o.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
                 })
                 .AddCookie()
                 .AddGoogle(googleOptions =>
